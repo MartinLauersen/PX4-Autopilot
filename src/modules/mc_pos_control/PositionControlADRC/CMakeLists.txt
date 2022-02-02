@@ -1,6 +1,6 @@
 ############################################################################
 #
-#   Copyright (c) 2015-2020 PX4 Development Team. All rights reserved.
+#   Copyright (c) 2019 PX4 Development Team. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -31,22 +31,13 @@
 #
 ############################################################################
 
-add_subdirectory(PositionControl)
-add_subdirectory(PositionControlADRC)
-add_subdirectory(Takeoff)
+px4_add_library(PositionControlADRC
+	ControlMath.cpp
+	ControlMath.hpp
+	PositionControlADRC.cpp
+	PositionControlADRC.hpp
+)
+target_include_directories(PositionControlADRC PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-px4_add_module(
-	MODULE modules__mc_pos_control
-	MAIN mc_pos_control
-	COMPILE_FLAGS
-	SRCS
-		MulticopterPositionControl.cpp
-		MulticopterPositionControl.hpp
-	DEPENDS
-		PositionControlADRC
-		PositionControl
-		Takeoff
-		controllib
-		geo
-		SlewRate
-	)
+px4_add_unit_gtest(SRC ControlMathTest.cpp LINKLIBS PositionControlADRC)
+px4_add_unit_gtest(SRC PositionControlADRCTest.cpp LINKLIBS PositionControlADRC)

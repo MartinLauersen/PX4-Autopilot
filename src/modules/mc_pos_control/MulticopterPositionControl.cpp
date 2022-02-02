@@ -470,8 +470,22 @@ void MulticopterPositionControl::Run()
 
 			_control.setState(states);
 
+
+			if (states.position(2) < -1 && !disable_controller)
+			{
+				//disable_controller = true;
+				//PX4_INFO("DISABLING CONTROLLER");
+			}
+			else if (!disable_controller)
+			{
+				//PX4_INFO("Running!");
+				if (_control.update(dt)) {
+					_failsafe_land_hysteresis.set_state_and_update(false, time_stamp_now);
+				}
+			}
+
 			// Run position control
-			if (_control.update(dt)) {
+/* 			if (_control.update(dt)) {
 				_failsafe_land_hysteresis.set_state_and_update(false, time_stamp_now);
 
 			} else {
@@ -493,7 +507,7 @@ void MulticopterPositionControl::Run()
 				_control.setInputSetpoint(failsafe_setpoint);
 				_control.setVelocityLimits(_param_mpc_xy_vel_max.get(), _param_mpc_z_vel_max_up.get(), _param_mpc_z_vel_max_dn.get());
 				_control.update(dt);
-			}
+			} */
 
 			// Publish internal position control setpoints
 			// on top of the input/feed-forward setpoints these containt the PID corrections

@@ -38,6 +38,7 @@
 #pragma once
 
 #include "PositionControl/PositionControl.hpp"
+#include "PositionControlADRC/PositionControlADRC.hpp"
 #include "Takeoff/Takeoff.hpp"
 
 #include <drivers/drv_hrt.h>
@@ -180,12 +181,15 @@ private:
 	control::BlockDerivative _vel_z_deriv; /**< velocity derivative in z */
 
 	PositionControl _control;  /**< class for core PID position control */
+	PositionControlADRC _adrc; /**< class for core ADRC position control */
 
 	hrt_abstime _last_warn{0}; /**< timer when the last warn message was sent out */
 
 	bool _in_failsafe{false};  /**< true if failsafe was entered within current cycle */
 
 	bool _hover_thrust_initialized{false};
+
+	bool disable_controller{false};
 
 	/** Timeout in us for trajectory data to get considered invalid */
 	static constexpr uint64_t TRAJECTORY_STREAM_TIMEOUT_US = 500_ms;
