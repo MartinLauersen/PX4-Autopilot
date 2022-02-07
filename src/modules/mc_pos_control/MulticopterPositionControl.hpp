@@ -224,7 +224,7 @@ private:
 	 * Check for validity of positon/velocity states.
 	 */
 	PositionControlStates set_vehicle_states(const vehicle_local_position_s &local_pos);
-
+	PositionControlADRCStates set_vehicle_states_ADRC(const vehicle_local_position_s &local_pos);
 	/**
 	 * Failsafe.
 	 * If flighttask fails for whatever reason, then do failsafe. This could

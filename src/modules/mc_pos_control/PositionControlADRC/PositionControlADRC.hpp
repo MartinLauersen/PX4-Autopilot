@@ -53,8 +53,7 @@ struct PositionControlADRCStates {
 
 /**
  * 	Core Position-Control for MC.
- * 	This class contains P-controller for position and
- * 	PID-controller for velocity.
+ * 	This class contains ADRC-controller for position and velocity.
  * 	Inputs:
  * 		vehicle position/velocity/yaw
  * 		desired set-point position/velocity/thrust/yaw/yaw-speed
@@ -62,14 +61,6 @@ struct PositionControlADRCStates {
  * 	Output
  * 		thrust vector and a yaw-setpoint
  *
- * 	If there is a position and a velocity set-point present, then
- * 	the velocity set-point is used as feed-forward. If feed-forward is
- * 	active, then the velocity component of the P-controller output has
- * 	priority over the feed-forward component.
- *
- * 	A setpoint that is NAN is considered as not set.
- * 	If there is a position/velocity- and thrust-setpoint present, then
- *  the thrust-setpoint is ommitted and recomputed from position-velocity-PID-loop.
  */
 class PositionControlADRC
 {

@@ -123,6 +123,7 @@ bool PositionControlADRC::update(const float dt)
 
 void PositionControlADRC::_positionControl()
 {
+	_gain_pos_p(2) = 0;
 	// P-position controller
 	Vector3f vel_sp_position = (_pos_sp - _pos).emult(_gain_pos_p);
 	// Position and feed-forward velocity setpoints or position states being NAN results in them not having an influence

@@ -168,6 +168,13 @@ int MulticopterPositionControl::parameters_update(bool force)
 			Vector3f(_param_mpc_xy_vel_d_acc.get(), _param_mpc_xy_vel_d_acc.get(), _param_mpc_z_vel_d_acc.get()));
 		_control.setHorizontalThrustMargin(_param_mpc_thr_xy_marg.get());
 
+		_adrc.setPositionGains(Vector3f(_param_mpc_xy_p.get(), _param_mpc_xy_p.get(), _param_mpc_z_p.get()));
+		_adrc.setVelocityGains(
+			Vector3f(_param_mpc_xy_vel_p_acc.get(), _param_mpc_xy_vel_p_acc.get(), _param_mpc_z_vel_p_acc.get()),
+			Vector3f(_param_mpc_xy_vel_i_acc.get(), _param_mpc_xy_vel_i_acc.get(), _param_mpc_z_vel_i_acc.get()),
+			Vector3f(_param_mpc_xy_vel_d_acc.get(), _param_mpc_xy_vel_d_acc.get(), _param_mpc_z_vel_d_acc.get()));
+		_adrc.setHorizontalThrustMargin(_param_mpc_thr_xy_marg.get());
+
 		// Check that the design parameters are inside the absolute maximum constraints
 		if (_param_mpc_xy_cruise.get() > _param_mpc_xy_vel_max.get()) {
 			_param_mpc_xy_cruise.set(_param_mpc_xy_vel_max.get());
@@ -228,6 +235,7 @@ int MulticopterPositionControl::parameters_update(bool force)
 
 		if (!_param_mpc_use_hte.get() || !_hover_thrust_initialized) {
 			_control.setHoverThrust(_param_mpc_thr_hover.get());
+			_adrc.setHoverThrust(_param_mpc_thr_hover.get());
 			_hover_thrust_initialized = true;
 		}
 
@@ -246,6 +254,61 @@ int MulticopterPositionControl::parameters_update(bool force)
 PositionControlStates MulticopterPositionControl::set_vehicle_states(const vehicle_local_position_s &local_pos)
 {
 	PositionControlStates states;
+
+	// only set position states if valid and finite
+	if (PX4_ISFINITE(local_pos.x) && PX4_ISFINITE(local_pos.y) && local_pos.xy_valid) {
+		states.position(0) = local_pos.x;
+		states.position(1) = local_pos.y;
+
+	} else {
+		states.position(0) = NAN;
+		states.position(1) = NAN;
+	}
+
+	if (PX4_ISFINITE(local_pos.z) && local_pos.z_valid) {
+		states.position(2) = local_pos.z;
+
+	} else {
+		states.position(2) = NAN;
+	}
+
+	if (PX4_ISFINITE(local_pos.vx) && PX4_ISFINITE(local_pos.vy) && local_pos.v_xy_valid) {
+		states.velocity(0) = local_pos.vx;
+		states.velocity(1) = local_pos.vy;
+		states.acceleration(0) = _vel_x_deriv.update(local_pos.vx);
+		states.acceleration(1) = _vel_y_deriv.update(local_pos.vy);
+
+	} else {
+		states.velocity(0) = NAN;
+		states.velocity(1) = NAN;
+		states.acceleration(0) = NAN;
+		states.acceleration(1) = NAN;
+
+		// reset derivatives to prevent acceleration spikes when regaining velocity
+		_vel_x_deriv.reset();
+		_vel_y_deriv.reset();
+	}
+
+	if (PX4_ISFINITE(local_pos.vz) && local_pos.v_z_valid) {
+		states.velocity(2) = local_pos.vz;
+		states.acceleration(2) = _vel_z_deriv.update(states.velocity(2));
+
+	} else {
+		states.velocity(2) = NAN;
+		states.acceleration(2) = NAN;
+
+		// reset derivative to prevent acceleration spikes when regaining velocity
+		_vel_z_deriv.reset();
+	}
+
+	states.yaw = local_pos.heading;
+
+	return states;
+}
+
+PositionControlADRCStates MulticopterPositionControl::set_vehicle_states_ADRC(const vehicle_local_position_s &local_pos)
+{
+	PositionControlADRCStates states;
 
 	// only set position states if valid and finite
 	if (PX4_ISFINITE(local_pos.x) && PX4_ISFINITE(local_pos.y) && local_pos.xy_valid) {
@@ -332,11 +395,13 @@ void MulticopterPositionControl::Run()
 			if (_hover_thrust_estimate_sub.update(&hte)) {
 				if (hte.valid) {
 					_control.updateHoverThrust(hte.hover_thrust);
+					_adrc.updateHoverThrust(hte.hover_thrust);
 				}
 			}
 		}
 
 		PositionControlStates states{set_vehicle_states(local_pos)};
+		PositionControlADRCStates statesADRC{set_vehicle_states_ADRC(local_pos)};
 
 		if (_vehicle_control_mode.flag_multicopter_position_control_enabled) {
 
@@ -430,6 +495,8 @@ void MulticopterPositionControl::Run()
 
 					// prevent any integrator windup
 					_control.resetIntegral();
+					_adrc.resetIntegral();
+
 				}
 			}
 
@@ -437,6 +504,7 @@ void MulticopterPositionControl::Run()
 			const float tilt_limit_deg = (_takeoff.getTakeoffState() < TakeoffState::flight)
 						     ? _param_mpc_tiltmax_lnd.get() : _param_mpc_tiltmax_air.get();
 			_control.setTiltLimit(_tilt_limit_slew_rate.update(math::radians(tilt_limit_deg), dt));
+			_adrc.setTiltLimit(_tilt_limit_slew_rate.update(math::radians(tilt_limit_deg), dt));
 
 			const float speed_up = _takeoff.updateRamp(dt,
 					       PX4_ISFINITE(_vehicle_constraints.speed_up) ? _vehicle_constraints.speed_up : _param_mpc_z_vel_max_up.get());
@@ -447,13 +515,18 @@ void MulticopterPositionControl::Run()
 			const float minimum_thrust = flying ? _param_mpc_thr_min.get() : 0.f;
 
 			_control.setThrustLimits(minimum_thrust, _param_mpc_thr_max.get());
+			_adrc.setThrustLimits(minimum_thrust, _param_mpc_thr_max.get());
 
 			_control.setVelocityLimits(
 				_param_mpc_xy_vel_max.get(),
 				math::min(speed_up, _param_mpc_z_vel_max_up.get()), // takeoff ramp starts with negative velocity limit
 				math::max(speed_down, 0.f));
-
+			_adrc.setVelocityLimits(
+				_param_mpc_xy_vel_max.get(),
+				math::min(speed_up, _param_mpc_z_vel_max_up.get()), // takeoff ramp starts with negative velocity limit
+				math::max(speed_down, 0.f));
 			_control.setInputSetpoint(_setpoint);
+			_adrc.setInputSetpoint(_setpoint);
 
 			// update states
 			if (!PX4_ISFINITE(_setpoint.z)
@@ -466,26 +539,21 @@ void MulticopterPositionControl::Run()
 				//  >= MPC_LAND_SPEED: use altitude derivative
 				float weighting = fminf(fabsf(_setpoint.vz) / _param_mpc_land_speed.get(), 1.f);
 				states.velocity(2) = local_pos.z_deriv * weighting + local_pos.vz * (1.f - weighting);
+				statesADRC.velocity(2) = local_pos.z_deriv * weighting + local_pos.vz * (1.f - weighting);
 			}
 
 			_control.setState(states);
+/* 			_adrc.setState(statesADRC);
+			if (_control.update(dt)) {
+				_failsafe_land_hysteresis.set_state_and_update(false, time_stamp_now);
+			}
+			_adrc.update(dt); */
 
 
-			if (states.position(2) < -1 && !disable_controller)
-			{
-				//disable_controller = true;
-				//PX4_INFO("DISABLING CONTROLLER");
-			}
-			else if (!disable_controller)
-			{
-				//PX4_INFO("Running!");
-				if (_control.update(dt)) {
-					_failsafe_land_hysteresis.set_state_and_update(false, time_stamp_now);
-				}
-			}
+
 
 			// Run position control
-/* 			if (_control.update(dt)) {
+			if (_control.update(dt)) {
 				_failsafe_land_hysteresis.set_state_and_update(false, time_stamp_now);
 
 			} else {
@@ -507,7 +575,7 @@ void MulticopterPositionControl::Run()
 				_control.setInputSetpoint(failsafe_setpoint);
 				_control.setVelocityLimits(_param_mpc_xy_vel_max.get(), _param_mpc_z_vel_max_up.get(), _param_mpc_z_vel_max_dn.get());
 				_control.update(dt);
-			} */
+			}
 
 			// Publish internal position control setpoints
 			// on top of the input/feed-forward setpoints these containt the PID corrections
@@ -520,6 +588,10 @@ void MulticopterPositionControl::Run()
 			// Publish attitude setpoint output
 			vehicle_attitude_setpoint_s attitude_setpoint{};
 			_control.getAttitudeSetpoint(attitude_setpoint);
+/* 			if (states.position(2) < -1)
+			{
+				_adrc.getAttitudeSetpoint(attitude_setpoint);
+			} */
 			attitude_setpoint.timestamp = hrt_absolute_time();
 			_vehicle_attitude_setpoint_pub.publish(attitude_setpoint);
 
