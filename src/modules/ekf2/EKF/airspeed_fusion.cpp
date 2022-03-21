@@ -58,7 +58,7 @@ void Ekf::fuseAirspeed()
 			       math::constrain(_airspeed_sample_delayed.eas2tas, 0.9f, 10.0f));
 
 	// determine if we need the airspeed fusion to correct states other than wind
-	const bool update_wind_only = !_is_wind_dead_reckoning;
+	const bool update_wind_only = !_control_status.flags.wind_dead_reckoning;
 
 	// Intermediate variables
 	const float HK0 = vn - vwn;
@@ -187,9 +187,7 @@ void Ekf::resetWind()
 */
 void Ekf::resetWindUsingAirspeed()
 {
-	const float euler_yaw = shouldUse321RotationSequence(_R_to_earth)
-				? getEuler321Yaw(_state.quat_nominal)
-				: getEuler312Yaw(_state.quat_nominal);
+	const float euler_yaw = getEulerYaw(_R_to_earth);
 
 	// estimate wind using zero sideslip assumption and airspeed measurement if airspeed available
 	_state.wind_vel(0) = _state.vel(0) - _airspeed_sample_delayed.true_airspeed * cosf(euler_yaw);

@@ -281,7 +281,7 @@ public:
 
 	bool			get_forwarding_on() { return _forwarding_on; }
 
-	bool			is_connected() { return _tstatus.heartbeat_type_gcs; }
+	bool			is_gcs_connected() { return _tstatus.heartbeat_type_gcs; }
 
 #if defined(MAVLINK_UDP)
 	static Mavlink 		*get_instance_for_network_port(unsigned long port);
@@ -544,6 +544,7 @@ private:
 	uORB::Subscription _vehicle_command_sub{ORB_ID(vehicle_command)};
 	uORB::Subscription _vehicle_command_ack_sub{ORB_ID(vehicle_command_ack)};
 	uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};
+	uORB::Subscription _gimbal_v1_command_sub{ORB_ID(gimbal_v1_command)};
 
 	static bool		_boot_complete;
 

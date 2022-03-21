@@ -776,7 +776,7 @@ void Mavlink::send_finish()
 # endif // CONFIG_NET
 
 		if ((_mode != MAVLINK_MODE_ONBOARD) && broadcast_enabled() &&
-		    (!get_client_source_initialized() || !is_connected())) {
+		    (!get_client_source_initialized() || !is_gcs_connected())) {
 
 			if (!_broadcast_address_found) {
 				find_broadcast_address();
@@ -2259,14 +2259,6 @@ Mavlink::task_main(int argc, char *argv[])
 
 			// update parameters from storage
 			mavlink_update_parameters();
-
-#if defined(CONFIG_NET)
-
-			if (!multicast_enabled()) {
-				_src_addr_initialized = false;
-			}
-
-#endif // CONFIG_NET
 		}
 
 		configure_sik_radio();
@@ -2392,6 +2384,30 @@ Mavlink::task_main(int argc, char *argv[])
 					}
 				}
 			}
+		}
+
+		// For legacy gimbals using the mavlink gimbal v1 protocol, we need to send out commands.
+		// We don't care about acks for these though.
+		if (_gimbal_v1_command_sub.updated()) {
+			vehicle_command_s cmd;
+			_gimbal_v1_command_sub.copy(&cmd);
+
+			// FIXME: filter for target system/component
+
+			mavlink_command_long_t msg{};
+			msg.param1 = cmd.param1;
+			msg.param2 = cmd.param2;
+			msg.param3 = cmd.param3;
+			msg.param4 = cmd.param4;
+			msg.param5 = cmd.param5;
+			msg.param6 = cmd.param6;
+			msg.param7 = cmd.param7;
+			msg.command = cmd.command;
+			msg.target_system = cmd.target_system;
+			msg.target_component = cmd.target_component;
+			msg.confirmation = 0;
+
+			mavlink_msg_command_long_send_struct(get_channel(), &msg);
 		}
 
 		/* check for shell output */

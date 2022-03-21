@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2015-2021 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2015-2022 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -64,11 +64,12 @@
 #include <uORB/SubscriptionCallback.hpp>
 #include <uORB/SubscriptionMultiArray.hpp>
 #include <uORB/topics/airspeed.h>
+#include <uORB/topics/airspeed_validated.h>
 #include <uORB/topics/distance_sensor.h>
 #include <uORB/topics/ekf2_timestamps.h>
-#include <uORB/topics/ekf_gps_drift.h>
 #include <uORB/topics/estimator_baro_bias.h>
 #include <uORB/topics/estimator_event_flags.h>
+#include <uORB/topics/estimator_gps_status.h>
 #include <uORB/topics/estimator_innovations.h>
 #include <uORB/topics/estimator_optical_flow_vel.h>
 #include <uORB/topics/estimator_sensor_bias.h>
@@ -86,7 +87,6 @@
 #include <uORB/topics/vehicle_global_position.h>
 #include <uORB/topics/vehicle_gps_position.h>
 #include <uORB/topics/vehicle_imu.h>
-#include <uORB/topics/vehicle_imu_status.h>
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_local_position.h>
 #include <uORB/topics/vehicle_magnetometer.h>
@@ -137,16 +137,16 @@ private:
 
 	void PublishAttitude(const hrt_abstime &timestamp);
 	void PublishBaroBias(const hrt_abstime &timestamp);
-	void PublishEkfDriftMetrics(const hrt_abstime &timestamp);
 	void PublishEventFlags(const hrt_abstime &timestamp);
 	void PublishGlobalPosition(const hrt_abstime &timestamp);
-	void PublishInnovations(const hrt_abstime &timestamp, const imuSample &imu);
+	void PublishGpsStatus(const hrt_abstime &timestamp);
+	void PublishInnovations(const hrt_abstime &timestamp);
 	void PublishInnovationTestRatios(const hrt_abstime &timestamp);
 	void PublishInnovationVariances(const hrt_abstime &timestamp);
 	void PublishLocalPosition(const hrt_abstime &timestamp);
 	void PublishOdometry(const hrt_abstime &timestamp, const imuSample &imu);
 	void PublishOdometryAligned(const hrt_abstime &timestamp, const vehicle_odometry_s &ev_odom);
-	void PublishOpticalFlowVel(const hrt_abstime &timestamp, const optical_flow_s &optical_flow);
+	void PublishOpticalFlowVel(const hrt_abstime &timestamp);
 	void PublishSensorBias(const hrt_abstime &timestamp);
 	void PublishStates(const hrt_abstime &timestamp);
 	void PublishStatus(const hrt_abstime &timestamp);
@@ -154,17 +154,14 @@ private:
 	void PublishWindEstimate(const hrt_abstime &timestamp);
 	void PublishYawEstimatorStatus(const hrt_abstime &timestamp);
 
-	void SelectImuStatus();
-
 	void UpdateAirspeedSample(ekf2_timestamps_s &ekf2_timestamps);
 	void UpdateAuxVelSample(ekf2_timestamps_s &ekf2_timestamps);
 	void UpdateBaroSample(ekf2_timestamps_s &ekf2_timestamps);
 	bool UpdateExtVisionSample(ekf2_timestamps_s &ekf2_timestamps, vehicle_odometry_s &ev_odom);
-	bool UpdateFlowSample(ekf2_timestamps_s &ekf2_timestamps, optical_flow_s &optical_flow);
+	bool UpdateFlowSample(ekf2_timestamps_s &ekf2_timestamps);
 	void UpdateGpsSample(ekf2_timestamps_s &ekf2_timestamps);
 	void UpdateMagSample(ekf2_timestamps_s &ekf2_timestamps);
 	void UpdateRangeSample(ekf2_timestamps_s &ekf2_timestamps);
-	void UpdateImuStatus();
 
 	void UpdateAccelCalibration(const hrt_abstime &timestamp);
 	void UpdateGyroCalibration(const hrt_abstime &timestamp);
@@ -194,6 +191,7 @@ private:
 	perf_counter_t _msg_missed_imu_perf{perf_alloc(PC_COUNT, MODULE_NAME": IMU message missed")};
 	perf_counter_t _msg_missed_air_data_perf{nullptr};
 	perf_counter_t _msg_missed_airspeed_perf{nullptr};
+	perf_counter_t _msg_missed_airspeed_validated_perf{nullptr};
 	perf_counter_t _msg_missed_distance_sensor_perf{nullptr};
 	perf_counter_t _msg_missed_gps_perf{nullptr};
 	perf_counter_t _msg_missed_landing_target_pose_perf{nullptr};
@@ -214,8 +212,6 @@ private:
 	InFlightCalibration _accel_cal{};
 	InFlightCalibration _gyro_cal{};
 	InFlightCalibration _mag_cal{};
-
-	bool _had_valid_terrain{false};			///< true if at any time there was a valid terrain estimate
 
 	uint64_t _gps_time_usec{0};
 	int32_t _gps_alttitude_ellipsoid{0};			///< altitude in 1E-3 meters (millimeters) above ellipsoid
@@ -240,15 +236,18 @@ private:
 	Vector3f _last_mag_calibration_published{};
 
 	hrt_abstime _last_sensor_bias_published{0};
+	hrt_abstime _last_gps_status_published{0};
 
 	float _last_baro_bias_published{};
 
 	float _airspeed_scale_factor{1.0f}; ///< scale factor correction applied to airspeed measurements
+	hrt_abstime _airspeed_validated_timestamp_last{0};
 
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
 
 	uORB::Subscription _airdata_sub{ORB_ID(vehicle_air_data)};
 	uORB::Subscription _airspeed_sub{ORB_ID(airspeed)};
+	uORB::Subscription _airspeed_validated_sub{ORB_ID(airspeed_validated)};
 	uORB::Subscription _ev_odom_sub{ORB_ID(vehicle_visual_odometry)};
 	uORB::Subscription _landing_target_pose_sub{ORB_ID(landing_target_pose)};
 	uORB::Subscription _magnetometer_sub{ORB_ID(vehicle_magnetometer)};
@@ -257,7 +256,6 @@ private:
 	uORB::Subscription _status_sub{ORB_ID(vehicle_status)};
 	uORB::Subscription _vehicle_command_sub{ORB_ID(vehicle_command)};
 	uORB::Subscription _vehicle_gps_position_sub{ORB_ID(vehicle_gps_position)};
-	uORB::Subscription _vehicle_imu_status_sub{ORB_ID(vehicle_imu_status)};
 	uORB::Subscription _vehicle_land_detected_sub{ORB_ID(vehicle_land_detected)};
 
 	uORB::SubscriptionCallbackWorkItem _sensor_combined_sub{this, ORB_ID(sensor_combined)};
@@ -268,9 +266,6 @@ private:
 	unsigned _distance_sensor_last_generation{0};
 
 	bool _callback_registered{false};
-
-	bool _armed{false};
-	bool _standby{false}; // standby arming state
 
 	hrt_abstime _last_status_flag_update{0};
 	hrt_abstime _last_range_sensor_update{0};
@@ -286,17 +281,17 @@ private:
 	uint32_t _filter_information_event_changes{0};
 
 	uORB::PublicationMulti<ekf2_timestamps_s>            _ekf2_timestamps_pub{ORB_ID(ekf2_timestamps)};
-	uORB::PublicationMulti<ekf_gps_drift_s>              _ekf_gps_drift_pub{ORB_ID(ekf_gps_drift)};
 	uORB::PublicationMulti<estimator_baro_bias_s>        _estimator_baro_bias_pub{ORB_ID(estimator_baro_bias)};
+	uORB::PublicationMulti<estimator_event_flags_s>      _estimator_event_flags_pub{ORB_ID(estimator_event_flags)};
+	uORB::PublicationMulti<estimator_gps_status_s>       _estimator_gps_status_pub{ORB_ID(estimator_gps_status)};
 	uORB::PublicationMulti<estimator_innovations_s>      _estimator_innovation_test_ratios_pub{ORB_ID(estimator_innovation_test_ratios)};
 	uORB::PublicationMulti<estimator_innovations_s>      _estimator_innovation_variances_pub{ORB_ID(estimator_innovation_variances)};
 	uORB::PublicationMulti<estimator_innovations_s>      _estimator_innovations_pub{ORB_ID(estimator_innovations)};
 	uORB::PublicationMulti<estimator_optical_flow_vel_s> _estimator_optical_flow_vel_pub{ORB_ID(estimator_optical_flow_vel)};
 	uORB::PublicationMulti<estimator_sensor_bias_s>      _estimator_sensor_bias_pub{ORB_ID(estimator_sensor_bias)};
 	uORB::PublicationMulti<estimator_states_s>           _estimator_states_pub{ORB_ID(estimator_states)};
-	uORB::PublicationMulti<estimator_status_s>           _estimator_status_pub{ORB_ID(estimator_status)};
 	uORB::PublicationMulti<estimator_status_flags_s>     _estimator_status_flags_pub{ORB_ID(estimator_status_flags)};
-	uORB::PublicationMulti<estimator_event_flags_s>      _estimator_event_flags_pub{ORB_ID(estimator_event_flags)};
+	uORB::PublicationMulti<estimator_status_s>           _estimator_status_pub{ORB_ID(estimator_status)};
 	uORB::PublicationMulti<vehicle_odometry_s>           _estimator_visual_odometry_aligned_pub{ORB_ID(estimator_visual_odometry_aligned)};
 	uORB::PublicationMulti<yaw_estimator_status_s>       _yaw_est_pub{ORB_ID(yaw_estimator_status)};
 
@@ -535,10 +530,6 @@ private:
 		_param_ekf2_pcoef_yn,	///< static pressure position error coefficient along the negative Y body axis
 		(ParamExtFloat<px4::params::EKF2_PCOEF_Z>)
 		_param_ekf2_pcoef_z,	///< static pressure position error coefficient along the Z body axis
-
-		// Test used to determine if the vehicle is static or moving
-		(ParamExtFloat<px4::params::EKF2_MOVE_TEST>)
-		_param_ekf2_move_test,	///< scaling applied to IMU data thresholds used to determine if the vehicle is static or moving.
 
 		(ParamFloat<px4::params::EKF2_REQ_GPS_H>) _param_ekf2_req_gps_h, ///< Required GPS health time
 		(ParamExtInt<px4::params::EKF2_MAG_CHECK>) _param_ekf2_mag_check, ///< Mag field strength check

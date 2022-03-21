@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2020-2021 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2020-2022 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -79,7 +79,7 @@ public:
 private:
 	void Run() override;
 
-	void ParametersUpdate(bool force = false);
+	bool ParametersUpdate(bool force = false);
 
 	void Publish(uint8_t instance, bool multi = false);
 
@@ -119,7 +119,6 @@ private:
 		uint32_t device_id{0};
 		matrix::Vector3f offset{};
 		matrix::Vector3f variance{};
-		float temperature{NAN};
 	} _mag_cal[ORB_MULTI_MAX_INSTANCES] {};
 
 	uORB::SubscriptionCallbackWorkItem _sensor_sub[MAX_SENSOR_COUNT] {

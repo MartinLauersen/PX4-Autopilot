@@ -29,7 +29,6 @@ set IOFW "/etc/extras/px4_io-v2_default.bin"
 set IO_PRESENT no
 set LOGGER_ARGS ""
 set LOGGER_BUF 8
-set MAV_TYPE none
 set MIXER none
 set MIXER_AUX none
 set MIXER_FILE none
@@ -486,11 +485,11 @@ else
 	. ${R}etc/init.d/rc.thermal_cal
 
 	#
-	# Start vmount to control mounts such as gimbals, disabled by default.
+	# Start gimbal to control mounts such as gimbals, disabled by default.
 	#
 	if param greater -s MNT_MODE_IN -1
 	then
-		vmount start
+		gimbal start
 	fi
 
 	# Check for flow sensor
@@ -573,7 +572,6 @@ unset IO_PRESENT
 unset IOFW
 unset LOGGER_ARGS
 unset LOGGER_BUF
-unset MAV_TYPE
 unset MIXER
 unset MIXER_AUX
 unset MIXER_FILE
