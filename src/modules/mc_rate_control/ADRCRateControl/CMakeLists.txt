@@ -31,21 +31,10 @@
 #
 ############################################################################
 
-add_subdirectory(RateControl)
-add_subdirectory(ADRCRateControl)
-
-px4_add_module(
-	MODULE modules__mc_rate_control
-	MAIN mc_rate_control
-	COMPILE_FLAGS
-		${MAX_CUSTOM_OPT_LEVEL}
-	SRCS
-		MulticopterRateControl.cpp
-		MulticopterRateControl.hpp
-	DEPENDS
-		circuit_breaker
-		mathlib
-		RateControl
-		ADRCRateControl
-		px4_work_queue
-	)
+px4_add_library(ADRCRateControl
+	ADRCRateControl.cpp
+	ADRCRateControl.hpp
+)
+target_compile_options(ADRCRateControl PRIVATE ${MAX_CUSTOM_OPT_LEVEL})
+target_include_directories(ADRCRateControl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(ADRCRateControl PRIVATE mathlib)

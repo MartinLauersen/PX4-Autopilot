@@ -398,3 +398,17 @@ PARAM_DEFINE_FLOAT(MC_ACRO_SUPEXPOY, 0.7f);
  * @group Multicopter Rate Control
  */
 PARAM_DEFINE_INT32(MC_BAT_SCALE_EN, 0);
+
+
+/**
+ * ADRC Feedback gain (b) for yaw.
+ *
+ * Sets feedback gain between control input and state change.
+ *
+ *
+ * @min 1
+ * @max 40000
+ * @decimal 2
+ * @group Multicopter Rate Control
+ */
+PARAM_DEFINE_FLOAT(MC_ADRC_YAW_B, 1.0f);
