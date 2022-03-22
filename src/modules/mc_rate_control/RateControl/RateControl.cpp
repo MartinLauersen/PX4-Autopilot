@@ -68,6 +68,8 @@ Vector3f RateControl::update(const Vector3f &rate, const Vector3f &rate_sp, cons
 		updateIntegral(rate_error, dt);
 	}
 
+	//PX4_INFO("dt: %f",(double)dt);
+
 	return torque;
 }
 

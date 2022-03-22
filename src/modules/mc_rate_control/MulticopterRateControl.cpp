@@ -96,6 +96,11 @@ MulticopterRateControl::parameters_updated()
 				  radians(_param_mc_acro_y_max.get()));
 
 	_actuators_0_circuit_breaker_enabled = circuit_breaker_enabled_by_val(_param_cbrk_rate_ctrl.get(), CBRK_RATE_CTRL_KEY);
+
+	const Vector3f b = Vector3f(_param_mc_acro_rate_r_b.get(), _param_mc_acro_rate_p_b.get(), _param_mc_acro_rate_y_b.get());
+	const Vector3f bw_c = Vector3f(_param_mc_acro_rate_r_bwc.get(), _param_mc_acro_rate_p_bwc.get(), _param_mc_acro_rate_y_bwc.get());
+	const Vector3f bw_o = bw_c.emult(Vector3f(_param_mc_acro_rate_r_bwos.get(), _param_mc_acro_rate_p_bwos.get(), _param_mc_acro_rate_y_bwos.get()));
+	_adrc_control.setGains(b, bw_c, bw_o);
 }
 
 void
@@ -238,8 +243,20 @@ MulticopterRateControl::Run()
 				_rate_control.setSaturationStatus(saturation_positive, saturation_negative);
 			}
 
-			// run rate controller
-			const Vector3f att_control = _rate_control.update(rates, _rates_sp, angular_accel, dt, _maybe_landed || _landed);
+			const Vector3f att_control_pid = _rate_control.update(rates, _rates_sp, angular_accel, dt, _maybe_landed || _landed);
+			const Vector3f att_control_adrc = _adrc_control.update(rates, _rates_sp);
+
+			Vector3f att_control;
+			// TESTING
+			if (_param_mc_adrc_rate_en.get()) {
+				att_control = att_control_adrc;
+				//att_control.print();
+			}
+			else {
+				att_control = att_control_pid;
+				//att_control.print();
+			}
+			_adrc_control.prev_out = att_control;
 
 			// publish rate controller status
 			rate_ctrl_status_s rate_ctrl_status{};
@@ -255,6 +272,8 @@ MulticopterRateControl::Run()
 			actuators.control[actuator_controls_s::INDEX_THROTTLE] = PX4_ISFINITE(_thrust_sp) ? _thrust_sp : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_LANDING_GEAR] = _landing_gear;
 			actuators.timestamp_sample = angular_velocity.timestamp_sample;
+
+
 
 			if (!_vehicle_status.is_vtol) {
 				publishTorqueSetpoint(att_control, angular_velocity.timestamp_sample);

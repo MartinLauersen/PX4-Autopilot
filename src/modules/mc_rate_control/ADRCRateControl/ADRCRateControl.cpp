@@ -44,6 +44,46 @@ void ADRCRateControl::setGains(const matrix::Vector3f &b, const matrix::Vector3f
 	_gain_b = b;
 	_bw_c = bw_c;
 	_bw_o = bw_o;
+
+	// TODO: Remove hardcoded sample time
+	float Ts = 1.0f/250.0f; // Sample time
+	SquareMatrix3f A;
+	Vector3f B;
+	Matrix<float, 1, 3> C;
+	//Vector3f C;
+
+	// Define prototypes
+	A.setIdentity();
+	A(0,1) = Ts;
+	A(0,2) = (Ts*Ts)/2;
+	A(1,2) = Ts;
+	B(0) = (Ts*Ts)/2;
+	B(1) = Ts;
+	C(0,0) = 1.0;
+
+	// Populate controller gain vectors
+	_gains_roll = calculateControllerGains(bw_c(0));
+	_gains_roll.print();
+	_gains_pitch = calculateControllerGains(bw_c(1));
+	_gains_yaw = calculateControllerGains(bw_c(2));
+
+	// Populate observer gain vectors
+	_L_roll = calculateObserverGains(_bw_o(0), Ts);
+	_L_roll.print();
+	_L_pitch = calculateObserverGains(_bw_o(1), Ts);
+	_L_yaw = calculateObserverGains(bw_o(2), Ts);
+
+	// Populate observer matrices
+	_zmat_roll = A - (_L_roll * C * A);
+	_zmat_roll.print();
+	_zmat_pitch = A - (_L_pitch * C * A);
+	_zmat_yaw = A - (_L_yaw * C * A);
+
+	_umat_roll = B - (_L_roll * C * B);
+	_umat_roll.print();
+	_umat_pitch = B - (_L_pitch * C * B);
+	_umat_yaw = B - (_L_yaw * C * B);
+
 }
 
 void ADRCRateControl::setSaturationStatus(const Vector<bool, 3> &saturation_positive,
@@ -53,14 +93,53 @@ void ADRCRateControl::setSaturationStatus(const Vector<bool, 3> &saturation_posi
 	_control_allocator_saturation_negative = saturation_negative;
 }
 
-Vector3f ADRCRateControl::update(const Vector3f &rate, const Vector3f &rate_sp, const Vector3f &angular_accel,
-			     const float dt, const bool landed)
+Vector3f ADRCRateControl::update(const Vector3f &rate, const Vector3f &rate_sp)
 {
-	// angular rates error
-	Vector3f rate_error = rate_sp - rate;
 
-	// PID control with feed forward
-	const Vector3f torque = _gain_b.emult(rate_error) - _bw_c.emult(angular_accel);
+	// Run observers on current state and previous control input
+	_z_roll = _zmat_roll*_z_roll + _umat_roll*prev_out(0) + _L_roll*rate(0);
+	_z_pitch = _zmat_pitch*_z_pitch + _umat_pitch*prev_out(1) + _L_pitch*rate(1);
+	_z_yaw = _zmat_yaw*_z_yaw + _umat_yaw*prev_out(2) + _L_yaw*rate(2);
+	//PX4_INFO(",%f, %f", (double)rate(0), (double)_z_roll(0));
+
+	// Calculate control outputs
+	Vector3f torque;
+	torque(0) = (_gains_roll(0)*(rate_sp(0) - _z_roll(0)) - _gains_roll(1)*_z_roll(1) - _z_roll(2))/_gain_b(0);
+	torque(1) = (_gains_pitch(0)*(rate_sp(1) - _z_pitch(0)) - _gains_pitch(1)*_z_pitch(1) - _z_pitch(2))/_gain_b(1);
+	torque(2) = (_gains_yaw(0)*(rate_sp(2) - _z_yaw(0)) - _gains_yaw(1)*_z_yaw(1) - _z_yaw(2))/_gain_b(2);
+
+	torque = saturateController(torque, -1.0f, 1.0f);
 
 	return torque;
 }
+
+Vector2f ADRCRateControl::calculateControllerGains(float bw_c)
+{
+	Vector2f gain;
+	gain(0) = bw_c * bw_c;
+	gain(1) = 2.0f * bw_c;
+
+	return gain;
+}
+
+Vector3f ADRCRateControl::calculateObserverGains(float bw_o, float Ts)
+{
+	Vector3f L;
+
+	float z_eso = expf(-bw_o*Ts); //Mapping pole in S plane to Z plane
+	L(0) = 1.0f-powf(z_eso, 3.0f);
+	L(1) = (3.0f/(2.0f*Ts)) * powf((1.0f - z_eso), 2.0f) * (1.0f + z_eso);
+	L(2) = (1.0f/powf(Ts, 2.0f)) * powf((1.0f -z_eso), 3.0f);
+
+	return L;
+}
+
+Vector3f ADRCRateControl::saturateController(Vector3f torque, float min, float max)
+{
+	Vector3f ret;
+	for (int i = 0; i < 3; i++){
+		ret(i) = math::min(math::max(torque(i), min),max);
+	}
+	return ret;
+}
+

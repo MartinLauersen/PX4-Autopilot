@@ -34,6 +34,7 @@
 #pragma once
 
 #include <RateControl.hpp>
+#include <ADRCRateControl.hpp>
 
 #include <lib/matrix/matrix/math.hpp>
 #include <lib/perf/perf_counter.h>
@@ -96,7 +97,8 @@ private:
 	void publishTorqueSetpoint(const matrix::Vector3f &torque_sp, const hrt_abstime &timestamp_sample);
 	void publishThrustSetpoint(const hrt_abstime &timestamp_sample);
 
-	RateControl _rate_control; ///< class for rate control calculations
+	RateControl _rate_control;     ///< class for rate control calculations
+	ADRCRateControl _adrc_control; ///< class for adrc-based rate control
 
 	uORB::Subscription _battery_status_sub{ORB_ID(battery_status)};
 	uORB::Subscription _landing_gear_sub{ORB_ID(landing_gear)};
@@ -180,7 +182,16 @@ private:
 		(ParamInt<px4::params::CBRK_RATE_CTRL>) _param_cbrk_rate_ctrl,
 
 		//Testing
-		(ParamFloat<px4::params::MC_ADRC_YAW_B>) _param_mc_adrc_yaw_b
+		(ParamBool<px4::params::ADRC_RATE_EN>) _param_mc_adrc_rate_en,
+		(ParamFloat<px4::params::ADRC_RATE_R_B>) _param_mc_acro_rate_r_b,
+		(ParamFloat<px4::params::ADRC_RATE_R_BWC>) _param_mc_acro_rate_r_bwc,
+		(ParamFloat<px4::params::ADRC_RATE_R_BWOS>) _param_mc_acro_rate_r_bwos,
+		(ParamFloat<px4::params::ADRC_RATE_P_B>) _param_mc_acro_rate_p_b,
+		(ParamFloat<px4::params::ADRC_RATE_P_BWC>) _param_mc_acro_rate_p_bwc,
+		(ParamFloat<px4::params::ADRC_RATE_P_BWOS>) _param_mc_acro_rate_p_bwos,
+		(ParamFloat<px4::params::ADRC_RATE_Y_B>) _param_mc_acro_rate_y_b,
+		(ParamFloat<px4::params::ADRC_RATE_Y_BWC>) _param_mc_acro_rate_y_bwc,
+		(ParamFloat<px4::params::ADRC_RATE_Y_BWOS>) _param_mc_acro_rate_y_bwos
 	)
 
 	matrix::Vector3f _acro_rate_max;	/**< max attitude rates in acro mode */

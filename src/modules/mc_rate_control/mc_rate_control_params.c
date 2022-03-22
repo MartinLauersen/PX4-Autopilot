@@ -401,14 +401,122 @@ PARAM_DEFINE_INT32(MC_BAT_SCALE_EN, 0);
 
 
 /**
- * ADRC Feedback gain (b) for yaw.
+ * ADRC Rate control enabled
  *
- * Sets feedback gain between control input and state change.
+ * Determines whether ADRC rate control is enabled (1) or disable (0).
+ *
+ *
+ * @boolean
+ * @group ADRC
+ */
+PARAM_DEFINE_INT32(ADRC_RATE_EN, 0);
+
+
+/**
+ * ADRC Roll rate feedback gain b
  *
  *
  * @min 1
- * @max 40000
+ * @max 100000
  * @decimal 2
- * @group Multicopter Rate Control
+ * @group ADRC
  */
-PARAM_DEFINE_FLOAT(MC_ADRC_YAW_B, 1.0f);
+PARAM_DEFINE_FLOAT(ADRC_RATE_R_B, 1000.0f);
+
+
+/**
+ * ADRC Roll rate controller bandwidth
+ *
+ *
+ * @min 0
+ * @max 100000
+ * @decimal 2
+ * @group ADRC
+ */
+PARAM_DEFINE_FLOAT(ADRC_RATE_R_BWC, 4.0f);
+
+
+/**
+ * ADRC Roll rate observer bandwidth factor
+ *
+ * Typically in range 3 - 10
+ *
+ * @min 1
+ * @max 100000
+ * @decimal 2
+ * @group ADRC
+ */
+PARAM_DEFINE_FLOAT(ADRC_RATE_R_BWOS, 3.0f);
+
+/**
+ * ADRC Pitch ratefeedback gain b
+ *
+ *
+ * @min 1
+ * @max 100000
+ * @decimal 2
+ * @group ADRC
+ */
+PARAM_DEFINE_FLOAT(ADRC_RATE_P_B, 1000.0f);
+
+
+/**
+ * ADRC Pitch rate controller bandwidth
+ *
+ *
+ * @min 0
+ * @max 100000
+ * @decimal 2
+ * @group ADRC
+ */
+PARAM_DEFINE_FLOAT(ADRC_RATE_P_BWC, 4.0f);
+
+
+/**
+ * ADRC Pitch rate observer bandwidth factor
+ *
+ * Typically in range 3 - 10
+ *
+ * @min 1
+ * @max 100000
+ * @decimal 2
+ * @group ADRC
+ */
+PARAM_DEFINE_FLOAT(ADRC_RATE_P_BWOS, 3.0f);
+
+
+/**
+ * ADRC Yaw ratefeedback gain b
+ *
+ *
+ * @min 1
+ * @max 100000
+ * @decimal 2
+ * @group ADRC
+ */
+PARAM_DEFINE_FLOAT(ADRC_RATE_Y_B, 1000.0f);
+
+
+/**
+ * ADRC Yaw rate controller bandwidth
+ *
+ *
+ * @min 0
+ * @max 100000
+ * @decimal 2
+ * @group ADRC
+ */
+PARAM_DEFINE_FLOAT(ADRC_RATE_Y_BWC, 4.0f);
+
+
+/**
+ * ADRC Yaw rate observer bandwidth factor
+ *
+ * Typically in range 3 - 10
+ *
+ * @min 1
+ * @max 100000
+ * @decimal 2
+ * @group ADRC
+ */
+PARAM_DEFINE_FLOAT(ADRC_RATE_Y_BWOS, 3.0f);

@@ -50,6 +50,8 @@ public:
 	ADRCRateControl() = default;
 	~ADRCRateControl() = default;
 
+	matrix::Vector3f prev_out;
+
 	/**
 	 * Set the rate control gains
 	 * @param b 3D vector of feedback gains for body x,y,z axis
@@ -72,9 +74,7 @@ public:
 	 * @param dt desired vehicle angular rate setpoint
 	 * @return [-1,1] normalized torque vector to apply to the vehicle
 	 */
-	matrix::Vector3f update(const matrix::Vector3f &rate, const matrix::Vector3f &rate_sp,
-				const matrix::Vector3f &angular_accel, const float dt, const bool landed);
-
+	matrix::Vector3f update(const matrix::Vector3f &rate, const matrix::Vector3f &rate_sp);
 
 private:
 
@@ -84,22 +84,35 @@ private:
 	matrix::Vector3f _bw_o;    ///< rate control observer bandwidth
 
 	// States
-	matrix::Vector3f _roll_z;  ///< Roll states
-	matrix::Vector3f _pitch_z; ///< Pitch states
-	matrix::Vector3f _yaw_z;   ///< Yaw states
+	matrix::Vector3f _z_roll;  ///< Roll states
+	matrix::Vector3f _z_pitch; ///< Pitch states
+	matrix::Vector3f _z_yaw;   ///< Yaw states
 
-	// Observer Matrices & Vecotrs
-	matrix::Vector3f _roll_L;     ///< Roll observer vector
-	matrix::Matrix3f _roll_zmat;  ///< Roll observer matrix for z
-	matrix::Matrix3f _roll_umat;  ///< Roll observer matrix for u
-	matrix::Vector3f _pitch_L;    ///< Pitch observer vector
-	matrix::Matrix3f _pitch_zmat; ///< Pitch observer matrix for z
-	matrix::Matrix3f _pitch_umat; ///< Pitch observer matrix for u
-	matrix::Vector3f _yaw_L;      ///< Yaw observer vector
-	matrix::Matrix3f _yaw_zmat;  ///< Yaw observer matrix for z
-	matrix::Matrix3f _yaw_umat;  ///< Yaw observer matrix for u
+	// Observer Matrices & Vectors
+	matrix::Matrix<float, 3, 1> _L_roll;     ///< Roll observer vector
+	matrix::Matrix<float, 3, 1> _L_pitch;    ///< Pitch observer vector
+	matrix::Matrix<float, 3, 1> _L_yaw;      ///< Yaw observer vector
+
+	matrix::Matrix3f _zmat_roll;   ///< Roll observer matrix for z
+	matrix::Matrix3f _zmat_pitch;  ///< Pitch observer matrix for z
+	matrix::Matrix3f _zmat_yaw;    ///< Yaw observer matrix for z
+
+	matrix::Vector3f _umat_roll;   ///< Roll observer matrix for u
+	matrix::Vector3f _umat_pitch;  ///< Pitch observer matrix for u
+	matrix::Vector3f _umat_yaw;    ///< Yaw observer matrix for u
+
+	// Controller Vectors
+	matrix::Vector2f _gains_roll;  ///< [K_P; K_D]
+	matrix::Vector2f _gains_pitch; ///< [K_P; K_D]
+	matrix::Vector2f _gains_yaw;   ///< [K_P; K_D]
 
 	// Feedback from control allocation
 	matrix::Vector<bool, 3> _control_allocator_saturation_negative;
 	matrix::Vector<bool, 3> _control_allocator_saturation_positive;
+
+	matrix::Vector2f calculateControllerGains(float bw_c);
+
+	matrix::Vector3f calculateObserverGains(float bw_o, float Ts);
+
+	matrix::Vector3f saturateController(matrix::Vector3f torque, float min, float max);
 };
