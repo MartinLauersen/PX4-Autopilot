@@ -64,6 +64,7 @@
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_thrust_setpoint.h>
 #include <uORB/topics/vehicle_torque_setpoint.h>
+#include <uORB/topics/adrc_leso.h>
 
 using namespace time_literals;
 
@@ -96,6 +97,7 @@ private:
 
 	void publishTorqueSetpoint(const matrix::Vector3f &torque_sp, const hrt_abstime &timestamp_sample);
 	void publishThrustSetpoint(const hrt_abstime &timestamp_sample);
+	void publishLESOState(matrix::Vector3f output, matrix::Vector3f measurements);
 
 	RateControl _rate_control;     ///< class for rate control calculations
 	ADRCRateControl _adrc_control; ///< class for adrc-based rate control
@@ -120,6 +122,7 @@ private:
 	uORB::Publication<vehicle_rates_setpoint_s>	_v_rates_sp_pub{ORB_ID(vehicle_rates_setpoint)};
 	uORB::Publication<vehicle_thrust_setpoint_s>	_vehicle_thrust_setpoint_pub{ORB_ID(vehicle_thrust_setpoint)};
 	uORB::Publication<vehicle_torque_setpoint_s>	_vehicle_torque_setpoint_pub{ORB_ID(vehicle_torque_setpoint)};
+	uORB::Publication<adrc_leso_s>			_leso_state_pub{ORB_ID(adrc_leso)};
 
 	orb_advert_t _mavlink_log_pub{nullptr};
 

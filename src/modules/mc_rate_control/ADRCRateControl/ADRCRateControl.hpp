@@ -42,7 +42,7 @@
 #include <matrix/matrix/math.hpp>
 
 #include <lib/mixer/MultirotorMixer/MultirotorMixer.hpp>
-#include <uORB/topics/rate_ctrl_status.h>
+
 
 class ADRCRateControl
 {
@@ -51,6 +51,11 @@ public:
 	~ADRCRateControl() = default;
 
 	matrix::Vector3f prev_out;
+
+	// States
+	matrix::Vector3f _z_roll;  ///< Roll states
+	matrix::Vector3f _z_pitch; ///< Pitch states
+	matrix::Vector3f _z_yaw;   ///< Yaw states
 
 	/**
 	 * Set the rate control gains
@@ -61,32 +66,22 @@ public:
 	void setGains(const matrix::Vector3f &b, const matrix::Vector3f &bw_c, const matrix::Vector3f &bw_o);
 
 	/**
-	 * Set saturation status
-	 * @param control saturation vector from control allocator
-	 */
-	void setSaturationStatus(const matrix::Vector<bool, 3> &saturation_positive,
-				 const matrix::Vector<bool, 3> &saturation_negative);
-
-	/**
 	 * Run one control loop cycle calculation
 	 * @param rate estimation of the current vehicle angular rate
 	 * @param rate_sp desired vehicle angular rate setpoint
-	 * @param dt desired vehicle angular rate setpoint
 	 * @return [-1,1] normalized torque vector to apply to the vehicle
 	 */
 	matrix::Vector3f update(const matrix::Vector3f &rate, const matrix::Vector3f &rate_sp);
 
 private:
 
+
 	// Gains
 	matrix::Vector3f _gain_b;  ///< rate control proportional gain for all axes x, y, z
 	matrix::Vector3f _bw_c;    ///< rate control controller bandwidth
 	matrix::Vector3f _bw_o;    ///< rate control observer bandwidth
 
-	// States
-	matrix::Vector3f _z_roll;  ///< Roll states
-	matrix::Vector3f _z_pitch; ///< Pitch states
-	matrix::Vector3f _z_yaw;   ///< Yaw states
+
 
 	// Observer Matrices & Vectors
 	matrix::Matrix<float, 3, 1> _L_roll;     ///< Roll observer vector

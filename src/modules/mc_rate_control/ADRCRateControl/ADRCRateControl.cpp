@@ -63,34 +63,23 @@ void ADRCRateControl::setGains(const matrix::Vector3f &b, const matrix::Vector3f
 
 	// Populate controller gain vectors
 	_gains_roll = calculateControllerGains(bw_c(0));
-	_gains_roll.print();
 	_gains_pitch = calculateControllerGains(bw_c(1));
 	_gains_yaw = calculateControllerGains(bw_c(2));
 
 	// Populate observer gain vectors
 	_L_roll = calculateObserverGains(_bw_o(0), Ts);
-	_L_roll.print();
 	_L_pitch = calculateObserverGains(_bw_o(1), Ts);
 	_L_yaw = calculateObserverGains(bw_o(2), Ts);
 
 	// Populate observer matrices
 	_zmat_roll = A - (_L_roll * C * A);
-	_zmat_roll.print();
 	_zmat_pitch = A - (_L_pitch * C * A);
 	_zmat_yaw = A - (_L_yaw * C * A);
 
 	_umat_roll = B - (_L_roll * C * B);
-	_umat_roll.print();
 	_umat_pitch = B - (_L_pitch * C * B);
 	_umat_yaw = B - (_L_yaw * C * B);
 
-}
-
-void ADRCRateControl::setSaturationStatus(const Vector<bool, 3> &saturation_positive,
-				      const Vector<bool, 3> &saturation_negative)
-{
-	_control_allocator_saturation_positive = saturation_positive;
-	_control_allocator_saturation_negative = saturation_negative;
 }
 
 Vector3f ADRCRateControl::update(const Vector3f &rate, const Vector3f &rate_sp)
@@ -142,4 +131,3 @@ Vector3f ADRCRateControl::saturateController(Vector3f torque, float min, float m
 	}
 	return ret;
 }
-
