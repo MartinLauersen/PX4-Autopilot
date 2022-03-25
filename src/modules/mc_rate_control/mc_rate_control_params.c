@@ -416,8 +416,8 @@ PARAM_DEFINE_INT32(ADRC_RATE_EN, 0);
  * ADRC Roll rate feedback gain b
  *
  *
- * @min 1
- * @max 100000
+ * @min -1000000
+ * @max 1000000
  * @decimal 2
  * @group ADRC
  */
@@ -441,7 +441,7 @@ PARAM_DEFINE_FLOAT(ADRC_RATE_R_BWC, 4.0f);
  *
  * Typically in range 3 - 10
  *
- * @min 1
+ * @min 0
  * @max 100000
  * @decimal 2
  * @group ADRC
@@ -452,8 +452,8 @@ PARAM_DEFINE_FLOAT(ADRC_RATE_R_BWOS, 3.0f);
  * ADRC Pitch ratefeedback gain b
  *
  *
- * @min 1
- * @max 100000
+ * @min -1000000
+ * @max 1000000
  * @decimal 2
  * @group ADRC
  */
@@ -477,7 +477,7 @@ PARAM_DEFINE_FLOAT(ADRC_RATE_P_BWC, 4.0f);
  *
  * Typically in range 3 - 10
  *
- * @min 1
+ * @min 0
  * @max 100000
  * @decimal 2
  * @group ADRC
@@ -489,8 +489,8 @@ PARAM_DEFINE_FLOAT(ADRC_RATE_P_BWOS, 3.0f);
  * ADRC Yaw ratefeedback gain b
  *
  *
- * @min 1
- * @max 100000
+ * @min -1000000
+ * @max 1000000
  * @decimal 2
  * @group ADRC
  */
@@ -514,7 +514,7 @@ PARAM_DEFINE_FLOAT(ADRC_RATE_Y_BWC, 4.0f);
  *
  * Typically in range 3 - 10
  *
- * @min 1
+ * @min 0
  * @max 100000
  * @decimal 2
  * @group ADRC
