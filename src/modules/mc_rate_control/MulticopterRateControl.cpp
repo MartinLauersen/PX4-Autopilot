@@ -244,7 +244,7 @@ MulticopterRateControl::Run()
 			}
 
 			const Vector3f att_control_pid = _rate_control.update(rates, _rates_sp, angular_accel, dt, _maybe_landed || _landed);
-			const Vector3f att_control_adrc = _adrc_control.update(rates, _rates_sp);
+			const Vector3f att_control_adrc = _adrc_control.update(rates, _rates_sp, _param_mc_adrc_rate_en.get());
 
 			Vector3f att_control;
 			// TESTING
@@ -273,7 +273,6 @@ MulticopterRateControl::Run()
 			actuators.control[actuator_controls_s::INDEX_LANDING_GEAR] = _landing_gear;
 			actuators.timestamp_sample = angular_velocity.timestamp_sample;
 
-			publishLESOState(att_control, rates);
 
 			if (!_vehicle_status.is_vtol) {
 				publishTorqueSetpoint(att_control, angular_velocity.timestamp_sample);
@@ -337,19 +336,6 @@ void MulticopterRateControl::publishThrustSetpoint(const hrt_abstime &timestamp_
 	v_thrust_sp.xyz[2] = PX4_ISFINITE(_thrust_sp) ? -_thrust_sp : 0.0f; // Z is Down
 
 	_vehicle_thrust_setpoint_pub.publish(v_thrust_sp);
-}
-
-void MulticopterRateControl::publishLESOState(Vector3f output, Vector3f measurements)
-{
-	adrc_leso_s leso_state = {};
-	leso_state.timestamp = hrt_absolute_time();
-	leso_state.y = measurements(0);
-	leso_state.u = output(0);
-	leso_state.z1 = _adrc_control._z_roll(0);
-	leso_state.z2 = _adrc_control._z_roll(1);
-	leso_state.z3 = _adrc_control._z_roll(2);
-
-	_leso_state_pub.publish(leso_state);
 }
 
 void MulticopterRateControl::updateActuatorControlsStatus(const actuator_controls_s &actuators, float dt)

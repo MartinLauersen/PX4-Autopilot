@@ -50,7 +50,6 @@ void ADRCRateControl::setGains(const matrix::Vector3f &b, const matrix::Vector3f
 	SquareMatrix3f A;
 	Vector3f B;
 	Matrix<float, 1, 3> C;
-	//Vector3f C;
 
 	// Define prototypes
 	A.setIdentity();
@@ -82,14 +81,13 @@ void ADRCRateControl::setGains(const matrix::Vector3f &b, const matrix::Vector3f
 
 }
 
-Vector3f ADRCRateControl::update(const Vector3f &rate, const Vector3f &rate_sp)
+Vector3f ADRCRateControl::update(const Vector3f &rate, const Vector3f &rate_sp, bool enabled)
 {
 
 	// Run observers on current state and previous control input
 	_z_roll = _zmat_roll*_z_roll + _umat_roll*prev_out(0) + _L_roll*rate(0);
 	_z_pitch = _zmat_pitch*_z_pitch + _umat_pitch*prev_out(1) + _L_pitch*rate(1);
 	_z_yaw = _zmat_yaw*_z_yaw + _umat_yaw*prev_out(2) + _L_yaw*rate(2);
-	//PX4_INFO(",%f, %f", (double)rate(0), (double)_z_roll(0));
 
 	// Calculate control outputs
 	Vector3f torque;
@@ -98,7 +96,7 @@ Vector3f ADRCRateControl::update(const Vector3f &rate, const Vector3f &rate_sp)
 	torque(2) = (_gains_yaw(0)*(rate_sp(2) - _z_yaw(0)) - _gains_yaw(1)*_z_yaw(1) - _z_yaw(2))/_gain_b(2);
 
 	torque = saturateController(torque, -1.0f, 1.0f);
-
+	publishLESOState(torque, rate, rate_sp, enabled);
 	return torque;
 }
 
@@ -130,4 +128,22 @@ Vector3f ADRCRateControl::saturateController(Vector3f torque, float min, float m
 		ret(i) = math::min(math::max(torque(i), min),max);
 	}
 	return ret;
+}
+
+void ADRCRateControl::publishLESOState(Vector3f output, Vector3f measurements, Vector3f setpoint, bool enabled)
+{
+	adrc_leso_s leso_state = {};
+	leso_state.timestamp = hrt_absolute_time();
+	leso_state.r = setpoint(0);
+	leso_state.y = measurements(0);
+	leso_state.u = output(0);
+	leso_state.z1 = _z_roll(0);
+	leso_state.z2 = _z_roll(1);
+	leso_state.z3 = _z_roll(2);
+	leso_state.ctrl_en = enabled;
+	leso_state.b = _gain_b(0);
+	leso_state.bwc = _bw_c(0);
+	leso_state.bwo = _bw_o(0);
+
+	_leso_state_pub.publish(leso_state);
 }

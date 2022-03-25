@@ -43,6 +43,9 @@
 
 #include <lib/mixer/MultirotorMixer/MultirotorMixer.hpp>
 
+#include <uORB/Publication.hpp>
+#include <uORB/topics/adrc_leso.h>
+
 
 class ADRCRateControl
 {
@@ -52,10 +55,6 @@ public:
 
 	matrix::Vector3f prev_out;
 
-	// States
-	matrix::Vector3f _z_roll;  ///< Roll states
-	matrix::Vector3f _z_pitch; ///< Pitch states
-	matrix::Vector3f _z_yaw;   ///< Yaw states
 
 	/**
 	 * Set the rate control gains
@@ -71,16 +70,24 @@ public:
 	 * @param rate_sp desired vehicle angular rate setpoint
 	 * @return [-1,1] normalized torque vector to apply to the vehicle
 	 */
-	matrix::Vector3f update(const matrix::Vector3f &rate, const matrix::Vector3f &rate_sp);
+	matrix::Vector3f update(const matrix::Vector3f &rate, const matrix::Vector3f &rate_sp, bool enabled);
 
 private:
+
+	// Publishers
+	uORB::Publication<adrc_leso_s>			_leso_state_pub{ORB_ID(adrc_leso)};
+
+
+	// States
+	matrix::Vector3f _z_roll;  ///< Roll states
+	matrix::Vector3f _z_pitch; ///< Pitch states
+	matrix::Vector3f _z_yaw;   ///< Yaw states
 
 
 	// Gains
 	matrix::Vector3f _gain_b;  ///< rate control proportional gain for all axes x, y, z
 	matrix::Vector3f _bw_c;    ///< rate control controller bandwidth
 	matrix::Vector3f _bw_o;    ///< rate control observer bandwidth
-
 
 
 	// Observer Matrices & Vectors
@@ -110,4 +117,7 @@ private:
 	matrix::Vector3f calculateObserverGains(float bw_o, float Ts);
 
 	matrix::Vector3f saturateController(matrix::Vector3f torque, float min, float max);
+
+	void publishLESOState(matrix::Vector3f output, matrix::Vector3f measurements, matrix::Vector3f setpoint, bool enabled);
+
 };
