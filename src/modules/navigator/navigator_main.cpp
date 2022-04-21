@@ -405,7 +405,10 @@ void Navigator::run()
 				rep->current.loiter_direction = 1;
 				rep->current.type = position_setpoint_s::SETPOINT_TYPE_TAKEOFF;
 
-				if (home_position_valid()) {
+				if (home_global_position_valid()) {
+					// Only set yaw if we know the true heading
+					// We assume that the heading is valid when the global position is valid because true heading
+					// is required to fuse NE (e.g.: GNSS) data. // TODO: we should be more explicit here
 					rep->current.yaw = cmd.param4;
 
 					rep->previous.valid = true;
@@ -488,19 +491,6 @@ void Navigator::run()
 					}
 				}
 
-				if (get_vstatus()->nav_state == vehicle_status_s::NAVIGATION_STATE_AUTO_LOITER) {
-
-					// publish new reposition setpoint with updated speed/throtte when DO_CHANGE_SPEED
-					// was received in AUTO_LOITER mode
-
-					position_setpoint_triplet_s *rep = get_reposition_triplet();
-
-					// set repo setpoint to current, and only change speed and throttle fields
-					*rep = *(get_position_setpoint_triplet());
-					rep->current.cruising_speed = get_cruising_speed();
-					rep->current.cruising_throttle = get_cruising_throttle();
-				}
-
 				// TODO: handle responses for supported DO_CHANGE_SPEED options?
 				publish_vehicle_command_ack(cmd, vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED);
 
@@ -546,9 +536,10 @@ void Navigator::run()
 
 				publish_vehicle_command_ack(cmd, vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED);
 
-			} else if (cmd.command == vehicle_command_s::VEHICLE_CMD_DO_VTOL_TRANSITION) {
-				// reset cruise speed and throttle to default when transitioning
-				set_cruising_speed();
+			} else if (cmd.command == vehicle_command_s::VEHICLE_CMD_DO_VTOL_TRANSITION
+				   && get_vstatus()->nav_state != vehicle_status_s::NAVIGATION_STATE_AUTO_VTOL_TAKEOFF) {
+				// reset cruise speed and throttle to default when transitioning (VTOL Takeoff handles it separately)
+				reset_cruising_speed();
 				set_cruising_throttle();
 
 				// need to update current setpooint with reset cruise speed and throttle
@@ -848,7 +839,7 @@ void Navigator::geofence_breach_check(bool &have_geofence_position_data)
 		_gf_breach_avoidance.setMaxHorDistHome(_geofence.getMaxHorDistanceHome());
 		_gf_breach_avoidance.setMaxVerDistHome(_geofence.getMaxVerDistanceHome());
 
-		if (home_position_valid()) {
+		if (home_global_position_valid()) {
 			_gf_breach_avoidance.setHomePosition(_home_pos.lat, _home_pos.lon, _home_pos.alt);
 		}
 
@@ -1564,8 +1555,7 @@ bool Navigator::geofence_allows_position(const vehicle_global_position_s &pos)
 	    (_geofence.getGeofenceAction() != geofence_result_s::GF_ACTION_WARN)) {
 
 		if (PX4_ISFINITE(pos.lat) && PX4_ISFINITE(pos.lon)) {
-			return _geofence.check(pos, _gps_pos, _home_pos,
-					       home_position_valid());
+			return _geofence.check(pos, _gps_pos);
 		}
 	}
 

@@ -46,6 +46,8 @@ VehicleAngularVelocity::VehicleAngularVelocity() :
 	ModuleParams(nullptr),
 	ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::rate_ctrl)
 {
+	_vehicle_angular_acceleration_pub.advertise();
+	_vehicle_angular_velocity_pub.advertise();
 }
 
 VehicleAngularVelocity::~VehicleAngularVelocity()
@@ -73,7 +75,7 @@ bool VehicleAngularVelocity::Start()
 
 	// sensor_selection needed to change the active sensor if the primary stops updating
 	if (!_sensor_selection_sub.registerCallback()) {
-		PX4_ERR("sensor_selection callback registration failed");
+		PX4_ERR("callback registration failed");
 		return false;
 	}
 
