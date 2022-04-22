@@ -91,3 +91,10 @@ rtps:
     send:    true
   - msg:     adrc_leso
     send:    true
+  - msg:     vehicle_rates_setpoint
+    send:    true
+    receive: true
+  - msg:     vehicle_angular_velocity
+    send:    true
+  - msg:     vehicle_angular_acceleration
+    send:    true
