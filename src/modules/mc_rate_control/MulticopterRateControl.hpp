@@ -61,6 +61,7 @@
 #include <uORB/topics/vehicle_control_mode.h>
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
+#include <uORB/topics/vehicle_rates_setpoint_offboard.h>
 #include <uORB/topics/vehicle_status.h>
 #include <uORB/topics/vehicle_thrust_setpoint.h>
 #include <uORB/topics/vehicle_torque_setpoint.h>
@@ -107,6 +108,7 @@ private:
 	uORB::Subscription _control_allocator_status_sub{ORB_ID(control_allocator_status)};
 	uORB::Subscription _v_control_mode_sub{ORB_ID(vehicle_control_mode)};
 	uORB::Subscription _v_rates_sp_sub{ORB_ID(vehicle_rates_setpoint)};
+	uORB::Subscription _v_rates_sp_offboard_sub{ORB_ID(vehicle_rates_setpoint_offboard)};
 	uORB::Subscription _vehicle_angular_acceleration_sub{ORB_ID(vehicle_angular_acceleration)};
 	uORB::Subscription _vehicle_land_detected_sub{ORB_ID(vehicle_land_detected)};
 	uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};
