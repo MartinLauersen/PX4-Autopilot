@@ -89,15 +89,17 @@ rtps:
     send:    true
   - msg:     sensor_combined
     send:    true
-  - msg:     adrc_leso
+  - msg:     vehicle_attitude
     send:    true
-  - msg:     vehicle_rates_setpoint
-    send:    true
-  - msg:     vehicle_rates_setpoint_offboard
-    receive: true
   - msg:     vehicle_angular_velocity
     send:    true
   - msg:     vehicle_angular_acceleration
     send:    true
-  - msg:     vehicle_attitude
+  - msg:     vehicle_angular_acceleration_setpoint
+    receive: true
+  - msg:     vehicle_attitude_setpoint
+    receive: true
+  - msg:     vehicle_rates_setpoint
     send:    true
+  - msg:     vehicle_rates_setpoint_offboard
+    receive: true
