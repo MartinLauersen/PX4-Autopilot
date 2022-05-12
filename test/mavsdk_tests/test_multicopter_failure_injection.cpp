@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- *   Copyright (c) 2022 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2021 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,57 +31,31 @@
  *
  ****************************************************************************/
 
-#pragma once
+#include <thread>
+#include <chrono>
 
-#include <canard.h>
-#include "o1heap/o1heap.h"
-#include "CanardInterface.hpp"
+#include "autopilot_tester_failure.h"
 
-class CanardHandle
+TEST_CASE("Failure Injection - Reject mid-air when it is disabled", "[multicopter]")
 {
-	/*
-	* This memory is allocated for the 01Heap allocator used by
-	* libcanard to store incoming/outcoming data
-	* Current size of 8192 bytes is arbitrary, should be optimized further
-	* when more nodes and messages are on the CAN bus
-	*/
-	static constexpr unsigned HeapSize = 8192;
+	AutopilotTesterFailure tester;
+	tester.connect(connection_url);
+	tester.wait_until_ready();
+	tester.arm();
+	tester.takeoff();
+	tester.wait_until_hovering();
+	tester.inject_failure(mavsdk::Failure::FailureUnit::SystemMotor, mavsdk::Failure::FailureType::Off, 1,
+			      mavsdk::Failure::Result::Disabled);
+	tester.execute_rtl();
+	std::chrono::seconds until_disarmed_timeout = std::chrono::seconds(180);
+	tester.wait_until_disarmed(until_disarmed_timeout);
+}
 
-public:
-	CanardHandle(uint32_t node_id, const size_t capacity, const size_t mtu_bytes);
-	~CanardHandle();
-
-	bool init();
-
-	void receive();
-	void transmit();
-
-	int32_t TxPush(const CanardMicrosecond             tx_deadline_usec,
-		       const CanardTransferMetadata *const metadata,
-		       const size_t                        payload_size,
-		       const void *const                   payload);
-
-	int8_t RxSubscribe(const CanardTransferKind    transfer_kind,
-			   const CanardPortID          port_id,
-			   const size_t                extent,
-			   const CanardMicrosecond     transfer_id_timeout_usec,
-			   CanardRxSubscription *const out_subscription);
-	int8_t RxUnsubscribe(const CanardTransferKind transfer_kind,
-			     const CanardPortID       port_id);
-	CanardTreeNode *getRxSubscriptions(CanardTransferKind kind);
-	O1HeapDiagnostics getO1HeapDiagnostics();
-
-	int32_t mtu();
-	CanardNodeID node_id();
-	void set_node_id(CanardNodeID id);
-
-private:
-	CanardInterface *_can_interface;
-
-	CanardInstance _canard_instance;
-
-	CanardTxQueue _queue;
-
-	void *_cyphal_heap{nullptr};
-
-};
+TEST_CASE("Failure Injection - Reject before arming", "[multicopter]")
+{
+	AutopilotTesterFailure tester;
+	tester.connect(connection_url);
+	tester.wait_until_ready();
+	tester.inject_failure(mavsdk::Failure::FailureUnit::SystemMotor, mavsdk::Failure::FailureType::Off, 1,
+			      mavsdk::Failure::Result::Disabled);
+}

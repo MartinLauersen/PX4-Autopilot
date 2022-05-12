@@ -1,6 +1,6 @@
-/***************************************************************************
+/****************************************************************************
  *
- *   Copyright (c) 2013-2014 PX4 Development Team. All rights reserved.
+ *   Copyright (c) 2021 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,44 +30,35 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-/**
- * @file enginefailure.h
- * Helper class for a fixedwing engine failure mode
- *
- * @author Thomas Gubler <thomasgubler@gmail.com>
- */
 
 #pragma once
 
-#include "navigator_mode.h"
-#include "mission_block.h"
+#include "autopilot_tester.h"
 
-class Navigator;
+#include <mavsdk/mavsdk.h>
+#include <mavsdk/plugins/action/action.h>
+#include <mavsdk/plugins/failure/failure.h>
 
-class EngineFailure : public MissionBlock
+
+class AutopilotTesterFailure : public AutopilotTester
 {
 public:
-	EngineFailure(Navigator *navigator);
-	~EngineFailure() = default;
+	AutopilotTesterFailure() = default;
+	~AutopilotTesterFailure() = default;
 
-	void on_inactive() override;
-	void on_activation() override;
-	void on_active() override;
+	void set_param_sys_failure_en(bool value);
+	void set_param_fd_act_en(bool value);
+	void set_param_mc_airmode(int value);
+	void set_param_ca_failure_mode(int value);
+	void set_param_com_act_fail_act(int value);
+
+	void enable_actuator_output_status();
+	void ensure_motor_stopped(unsigned index, unsigned num_motors);
+
+	void inject_failure(mavsdk::Failure::FailureUnit failure_unit, mavsdk::Failure::FailureType failure_type, int instance,
+			    mavsdk::Failure::Result expected_result);
+	void connect(const std::string uri);
 
 private:
-	enum EFState {
-		EF_STATE_NONE = 0,
-		EF_STATE_LOITERDOWN = 1,
-	} _ef_state{EF_STATE_NONE};
-
-	/**
-	 * Set the DLL item
-	 */
-	void		set_ef_item();
-
-	/**
-	 * Move to next EF item
-	 */
-	void		advance_ef();
-
+	std::unique_ptr<mavsdk::Failure> _failure{};
 };
